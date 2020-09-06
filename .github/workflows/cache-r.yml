@@ -1,0 +1,51 @@
+name: build
+on:
+  push:
+    branches-ignore:
+      - gh-pages
+jobs:
+  rmd-render-job:
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: ubuntu-18.04, r: '4.0.0'}
+    runs-on: ${{ matrix.config.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - uses: r-lib/actions/setup-r@master
+        with:
+          r-version: ${{ matrix.config.r }}
+      - name: Install linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libxml2-dev libssl-dev libcurl4-openssl-dev libudunits2-dev libopenblas-base
+      - name: Define variables
+        run: |
+          echo "::set-env name=path_repo::$(pwd)"
+          echo "::set-env name=path_export::$(grep -E '^output_dir' _site.yml | sed 's/^output_dir://' | xargs)"
+          echo "::set-env name=repo::$(echo "$GITHUB_REPOSITORY" | sed 's/.*\///')"
+      - name: Check R installation and variables
+        run: |
+          Rscript -e "print('R installation works!')"
+          ls ${{ env.R_LIBS_USER }} > r-packages.txt
+          echo "Github actor: ${GITHUB_ACTOR}"
+          echo "Github repository: ${GITHUB_REPOSITORY}"
+          echo "Github repo: ${repo}"
+          echo "Path repo: ${path_repo}"
+          echo "Path export: ${path_export}"
+          echo "Folder contents at $(pwd):"
+          ls -lh
+      - name: Cache R packages
+        id: cache-rp
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-${{ matrix.config.r }}-${{ hashFiles('r-packages.txt') }}
+      - name: Install R dependencies
+        if: steps.cache-rp.outputs.cache-hit != 'true'
+        run: |
+          Rscript -e 'install.packages("yaml")'
+          Rscript -e 'install.packages("lme4")'
+          echo "R directory size:"
+          du -sh ${{ env.R_LIBS_USER }}
