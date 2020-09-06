@@ -23,7 +23,6 @@ jobs:
       - name: Define variables
         run: |
           echo "::set-env name=path_repo::$(pwd)"
-          echo "::set-env name=path_export::$(grep -E '^output_dir' _site.yml | sed 's/^output_dir://' | xargs)"
           echo "::set-env name=repo::$(echo "$GITHUB_REPOSITORY" | sed 's/.*\///')"
       - name: Check R installation and variables
         run: |
